@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.env.*
+
+# OS
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Artifacts
+*.zip
+dist/
+build/
+
+# Local data
+local-app/.cache/
+local-app/output/
+backend/.cache/
+backend/data/

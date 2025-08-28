@@ -1,0 +1,10 @@
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+requests==2.32.3
+# Optional but recommended for real face embeddings:
+onnxruntime==1.18.0
+insightface==0.7
+# If insightface fails to install, the code will fallback to a quick perceptual hash demo.
+imagehash==4.3.1
+Pillow==10.3.0
+tqdm==4.66.4

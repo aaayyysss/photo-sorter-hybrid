@@ -1,0 +1,6 @@
+{
+  "backend_url": "http://YOUR-SERVER-IP:8080",
+  "normalize": true,
+  "threshold": 0.32,
+  "mode": "move"
+}

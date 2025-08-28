@@ -1,52 +1,405 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Photo Sorter Hybrid — Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photo Sorter — Hybrid UI</title>
   <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 24px; }
-    h1 { margin: 0 0 12px 0; }
-    .card { border:1px solid #ddd; border-radius:10px; padding:16px; margin:12px 0; background:#fff; }
-    input[type=text] { width:340px; padding:8px; }
-    button { padding:8px 12px; font-weight:600; }
-    code { background:#f5f5f5; padding:2px 4px; border-radius:4px; }
-    .muted { color:#666; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    :root { --fg:#1c1f23; --muted:#6a6f75; --bg:#f6f7f9; --card:#fff; --line:#e7e9ee; --accent:#2563eb; --ok:#16a34a; --warn:#d97706; --err:#dc2626; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    header{padding:18px 20px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px}
+    header h1{font-size:18px;margin:0}
+    main{max-width:1100px;margin:22px auto;padding:0 16px 48px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+    .card h3{margin:0 0 10px;font-size:16px}
+    label{font-weight:600;display:block;margin:12px 0 6px}
+    input[type="text"],input[type="password"],input[type="number"],select{
+      width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff
+    }
+    input[type="file"]{width:100%}
+    .inline{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .btn{cursor:pointer;border:1px solid var(--line);padding:9px 14px;border-radius:8px;background:#fff;font-weight:700}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn.ghost{background:#fff}
+    .btn.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+    .btn.danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .ok{color:var(--ok)} .warn-t{color:var(--warn)} .err{color:var(--err)}
+    #log{background:#0b1220;color:#cfd6e6;border-radius:10px;padding:12px;height:220px;overflow:auto;font:13px ui-monospace,Menlo,Consolas,monospace}
+    #log .s{color:#86efac} #log .w{color:#fde68a} #log .e{color:#fca5a5} #log .i{color:#93c5fd}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{border:1px solid var(--line);padding:6px 8px;font-size:13px}
+    th{background:#f4f6fb;text-align:left}
+    .kpi{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0}
+    .pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff}
+    details summary{cursor:pointer;font-weight:700;margin:2px 0 8px}
+    .right{display:flex;gap:8px;align-items:center;margin-left:auto}
   </style>
 </head>
 <body>
-  <h1>📸 Photo Sorter Hybrid — Dashboard</h1>
-  <div class="card">
-    <div class="row">
-      <label>Backend URL:</label>
-      <input id="backend" type="text" value="http://127.0.0.1:8080" />
-      <button id="ping">Ping</button>
+<header>
+  <h1>📸 Photo Sorter — Hybrid</h1>
+  <span class="muted">Normal & Power modes</span>
+  <div class="right">
+    <span id="health-dot" class="pill muted">health: unknown</span>
+    <button class="btn" id="btn-ping">Ping</button>
+  </div>
+</header>
+
+<main>
+  <div class="card" style="margin-bottom:16px">
+    <div class="inline">
+      <label style="margin:0">Backend URL</label>
+      <input id="backend" type="text" style="min-width:340px" placeholder="http://SERVER-IP:8080"/>
+      <button class="btn" id="save-url">Save</button>
+      <span class="muted">stored in browser only</span>
+      <div class="right"></div>
+      <label style="margin-left:auto;margin-bottom:0">Role</label>
+      <select id="role">
+        <option value="normal" selected>Normal user</option>
+        <option value="power">Power user</option>
+      </select>
+      <input id="power-pass" type="password" placeholder="Power passphrase" style="width:220px;display:none"/>
+      <button class="btn" id="unlock" style="display:none">Unlock</button>
     </div>
-    <div id="out" class="muted" style="margin-top:8px;">Ready.</div>
   </div>
 
-  <div class="card">
-    <h3>How to use</h3>
-    <ol>
-      <li>Run the <b>backend</b> on your server (Oracle VM) on <code>0.0.0.0:8080</code>.</li>
-      <li>Run <b>local-app/send_refs.py</b> to register reference persons (embeddings are computed locally).</li>
-      <li>Run <b>local-app/sort_local.py</b> to compute inbox embeddings locally and receive assignments from the backend. Files are moved/copied locally.</li>
-    </ol>
+  <div class="row">
+    <!-- NORMAL USER -->
+    <section class="card" id="panel-normal">
+      <h3>👤 Normal user</h3>
+      <p class="muted">Use JSON files generated by the local helper (no big photo uploads!).</p>
+
+      <details open>
+        <summary>Register References</summary>
+        <label>Upload <code>refs.json</code></label>
+        <input type="file" id="refs-file" accept="application/json"/>
+        <div class="inline" style="margin-top:8px">
+          <button class="btn primary" id="btn-refs">Register References</button>
+          <button class="btn ghost" id="btn-list-people">List Registered</button>
+        </div>
+        <div id="refs-summary" class="muted" style="margin-top:6px"></div>
+      </details>
+
+      <details open>
+        <summary>Run Sort (dry-run or real)</summary>
+        <label>Upload <code>inbox_faces.json</code></label>
+        <input type="file" id="inbox-file" accept="application/json"/>
+
+        <div class="inline" style="margin-top:10px">
+          <label>Threshold %</label>
+          <input id="thresh" type="number" min="10" max="95" value="32" style="width:90px"/>
+          <label><input type="checkbox" id="adaptive"> adaptive (μ − k·σ)</label>
+          <label>k</label><input id="kval" type="number" min="0" max="3" step="0.1" value="1.0" style="width:90px"/>
+        </div>
+
+        <div class="inline" style="margin-top:8px">
+          <label>Multi-face policy</label>
+          <select id="multi">
+            <option value="best_single">best_single</option>
+            <option value="copy_all" selected>copy_all</option>
+          </select>
+          <label>Mode</label>
+          <select id="outmode">
+            <option value="move" selected>Move</option>
+            <option value="link">Link</option>
+            <option value="copy">Copy</option>
+          </select>
+          <label><input type="checkbox" id="dryrun" checked> dry-run (preview only)</label>
+        </div>
+
+        <div class="inline" style="margin-top:10px">
+          <button class="btn primary" id="btn-sort">Run Sort</button>
+          <button class="btn ghost" id="btn-clear-preview">Clear Preview</button>
+        </div>
+
+        <div id="preview-wrap" style="margin-top:8px;display:none">
+          <h4 style="margin:10px 0 6px">Preview (first 80)</h4>
+          <table id="preview">
+            <thead><tr><th>#</th><th>Decision</th><th>Person</th><th>Score</th><th>Source</th><th>Destination</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <!-- POWER USER -->
+    <section class="card" id="panel-power" style="display:none">
+      <h3>🛠️ Power user</h3>
+      <p class="muted">Advanced controls (UI-gate only; add proper auth on the backend if needed).</p>
+
+      <div class="kpi">
+        <span class="pill" id="kpi-people">people: –</span>
+        <span class="pill" id="kpi-build">latest build: –</span>
+      </div>
+
+      <details open>
+        <summary>Backend controls</summary>
+        <div class="inline">
+          <button class="btn" id="btn-health">/health</button>
+          <button class="btn" id="btn-list-refs">/refs/list</button>
+          <button class="btn warn" id="btn-clear-refs">Clear refs</button>
+          <button class="btn" id="btn-artifacts">Download artifacts</button>
+        </div>
+        <div id="power-msg" class="muted" style="margin-top:6px"></div>
+      </details>
+
+      <details>
+        <summary>Settings (thresholds / device)</summary>
+        <div class="inline" style="margin-top:8px">
+          <label>Default threshold %</label><input id="p-thresh" type="number" value="32" style="width:90px"/>
+          <label><input id="p-adaptive" type="checkbox"> adaptive</label>
+          <label>k</label><input id="p-kval" type="number" min="0" max="3" step="0.1" value="1.0" style="width:90px"/>
+        </div>
+        <div class="inline" style="margin-top:8px">
+          <label><input id="p-gpu" type="checkbox"> Use GPU (requires CUDA)</label>
+          <button class="btn" id="btn-apply-device">Apply device</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>Danger zone</summary>
+        <div class="inline">
+          <button class="btn danger" id="btn-reset-backend">Reset backend state</button>
+        </div>
+      </details>
+    </section>
   </div>
 
-  <script>
-    const out = document.getElementById('out');
-    document.getElementById('ping').onclick = async () => {
-      const url = document.getElementById('backend').value.trim();
-      try {
-        const r = await fetch(url.replace(/\/$/, '') + '/api/health');
-        const j = await r.json();
-        out.textContent = '✅ ' + JSON.stringify(j);
-      } catch (e) {
-        out.textContent = '❌ ' + e;
-      }
+  <section class="card" style="margin-top:16px">
+    <h3>Logs</h3>
+    <div id="log"></div>
+  </section>
+</main>
+
+<script>
+  // ────────────── helpers ──────────────
+  const $ = sel => document.querySelector(sel);
+  const backendInput = $('#backend');
+  const logEl = $('#log');
+
+  function appendLog(msg, level='i'){
+    const div = document.createElement('div');
+    div.className = level;
+    const t = new Date().toLocaleTimeString();
+    div.textContent = `[${t}] ${msg}`;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function loadURL(){
+    const saved = localStorage.getItem('psh_backend');
+    if(saved) backendInput.value = saved;
+  }
+  function saveURL(){
+    const v = backendInput.value.trim();
+    if(!/^https?:\/\//.test(v)){ appendLog('Please provide http:// or https:// in backend URL','w'); return; }
+    localStorage.setItem('psh_backend', v);
+    appendLog('Backend URL saved','s');
+  }
+  function bURL(){ return backendInput.value.trim().replace(/\/+$/,''); }
+
+  // ────────────── role gating ──────────────
+  const roleSel = $('#role');
+  const powerPass = $('#power-pass');
+  const unlockBtn = $('#unlock');
+  const powerPanel = $('#panel-power');
+  const normalPanel = $('#panel-normal');
+
+  roleSel.addEventListener('change', ()=>{
+    if(roleSel.value==='power'){
+      powerPass.style.display = 'inline-block';
+      unlockBtn.style.display = 'inline-block';
+      powerPanel.style.display = 'none';
+    } else {
+      powerPass.style.display = 'none'; unlockBtn.style.display = 'none';
+      powerPanel.style.display = 'none';
+      normalPanel.style.display = 'block';
+    }
+  });
+  unlockBtn.addEventListener('click', ()=>{
+    const pass = powerPass.value;
+    // UI-only gate; set your own phrase here:
+    if(pass === 'photo-sorter-admin'){
+      powerPanel.style.display = 'block';
+      normalPanel.style.display = 'block';
+      appendLog('Power user unlocked','s');
+    } else {
+      appendLog('Wrong passphrase','e');
+    }
+  });
+
+  // ────────────── ping / health ──────────────
+  async function ping(){
+    const url = bURL() + '/health';
+    try{
+      const r = await fetch(url);
+      const j = await r.json();
+      $('#health-dot').textContent = 'health: ' + (j.status || r.status);
+      $('#kpi-build').textContent = 'latest build: ' + (j.build || 'n/a');
+      appendLog('Health OK','s');
+    }catch(e){
+      $('#health-dot').textContent = 'health: offline';
+      appendLog('Health failed: '+e.message,'e');
+    }
+  }
+
+  // ────────────── Normal: register refs ──────────────
+  async function sendRefs(){
+    const f = $('#refs-file').files[0];
+    if(!f){ appendLog('Select refs.json first','w'); return; }
+    let data;
+    try{
+      data = JSON.parse(await f.text());
+    }catch(e){
+      appendLog('Invalid JSON in refs.json','e'); return;
+    }
+    try{
+      const r = await fetch(bURL()+'/refs/register', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ refs: data.refs || data })
+      });
+      const j = await r.json();
+      appendLog(j.message || 'Registered', j.status==='success'?'s':'e');
+      $('#refs-summary').textContent = (j.summary || '');
+      // refresh people list
+      listPeople();
+    }catch(e){
+      appendLog('Register error: '+e.message,'e');
+    }
+  }
+
+  async function listPeople(){
+    try{
+      const r = await fetch(bURL()+'/refs/list');
+      const j = await r.json();
+      const n = Array.isArray(j.people) ? j.people.length : (j.count || 0);
+      $('#kpi-people').textContent = 'people: ' + n;
+      $('#refs-summary').textContent = 'Registered: ' + n + ' people';
+      appendLog('Listed '+n+' people','i');
+    }catch(e){
+      appendLog('List error: '+e.message,'e');
+    }
+  }
+
+  // ────────────── Normal: run sort ──────────────
+  function previewTable(rows){
+    const wrap = $('#preview-wrap'); const tb = $('#preview tbody');
+    tb.innerHTML = '';
+    rows.slice(0,80).forEach((row,i)=>{
+      const tr = document.createElement('tr');
+      const score = (typeof row.score==='number') ? row.score.toFixed(3) : '';
+      tr.innerHTML = `<td>${i+1}</td><td>${row.decision||''}</td><td>${row.person||''}</td>
+                      <td>${score}</td><td title="${row.src||''}">${(row.src||'').split(/[\\/]/).pop()}</td>
+                      <td title="${row.dst||''}">${(row.dst||'').split(/[\\/]/).pop()}</td>`;
+      tb.appendChild(tr);
+    });
+    wrap.style.display = rows.length ? 'block' : 'none';
+  }
+
+  async function runSort(){
+    const f = $('#inbox-file').files[0];
+    if(!f){ appendLog('Select inbox_faces.json first','w'); return; }
+    let data;
+    try{ data = JSON.parse(await f.text()); }catch(e){ appendLog('Invalid JSON in inbox_faces.json','e'); return; }
+
+    const payload = {
+      inbox: data.inbox || data,
+      threshold_pct: Number($('#thresh').value),
+      use_adaptive: $('#adaptive').checked,
+      adaptive_k: Number($('#kval').value),
+      multi_face_policy: $('#multi').value,
+      output_mode: $('#outmode').value,
+      dry_run: $('#dryrun').checked
     };
-  </script>
+
+    try{
+      const r = await fetch(bURL()+'/sort', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const j = await r.json();
+      appendLog(j.message || 'Sort finished', j.status==='success'?'s':'e');
+
+      if(Array.isArray(j.preview)){ previewTable(j.preview); }
+      if(j.manifest_url){ appendLog('Manifest: '+j.manifest_url, 'i'); }
+    }catch(e){
+      appendLog('Sort error: '+e.message,'e');
+    }
+  }
+
+  // ────────────── Power controls ──────────────
+  async function powerListRefs(){
+    try{
+      const r = await fetch(bURL()+'/refs/list');
+      const j = await r.json();
+      const n = Array.isArray(j.people)? j.people.length : (j.count||0);
+      $('#kpi-people').textContent = 'people: '+n;
+      $('#power-msg').textContent = 'Listed '+n+' people';
+      appendLog('Power: listed refs','i');
+    }catch(e){ appendLog('Power list error: '+e.message,'e'); }
+  }
+  async function powerClearRefs(){
+    if(!confirm('Delete all registered references?')) return;
+    try{
+      const r = await fetch(bURL()+'/refs/clear', {method:'POST'});
+      const j = await r.json();
+      appendLog(j.message||'Cleared', j.status==='success'?'s':'e');
+      powerListRefs();
+    }catch(e){ appendLog('Clear refs error: '+e.message,'e'); }
+  }
+  async function powerArtifacts(){
+    try{
+      const r = await fetch(bURL()+'/latest_artifacts');
+      const j = await r.json();
+      if(j.manifest_url) window.open(j.manifest_url,'_blank');
+      if(j.revert_bat_url) window.open(j.revert_bat_url,'_blank');
+      if(j.revert_sh_url) window.open(j.revert_sh_url,'_blank');
+      appendLog('Opened artifacts','i');
+    }catch(e){ appendLog('Artifacts error: '+e.message,'e'); }
+  }
+  async function powerApplyDevice(){
+    try{
+      const useGPU = $('#p-gpu').checked;
+      const r = await fetch(bURL()+'/set_device', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ use_gpu: useGPU })
+      });
+      const j = await r.json();
+      appendLog(j.message || 'Device applied', j.status==='success'?'s':'e');
+    }catch(e){ appendLog('Device error: '+e.message,'e'); }
+  }
+  async function powerReset(){
+    if(!confirm('Reset backend state?')) return;
+    try{
+      const r = await fetch(bURL()+'/reset_backend', {method:'POST'});
+      const j = await r.json();
+      appendLog(j.message || 'Reset backend', j.status==='success'?'s':'e');
+    }catch(e){ appendLog('Reset error: '+e.message,'e'); }
+  }
+
+  // ────────────── wire up ──────────────
+  $('#save-url').onclick = saveURL;
+  $('#btn-ping').onclick = ping;
+  $('#btn-refs').onclick = sendRefs;
+  $('#btn-list-people').onclick = listPeople;
+  $('#btn-sort').onclick = runSort;
+  $('#btn-clear-preview').onclick = ()=>previewTable([]);
+  $('#btn-health').onclick = ping;
+  $('#btn-list-refs').onclick = powerListRefs;
+  $('#btn-clear-refs').onclick = powerClearRefs;
+  $('#btn-artifacts').onclick = powerArtifacts;
+  $('#btn-apply-device').onclick = powerApplyDevice;
+  $('#btn-reset-backend').onclick = powerReset;
+
+  // init
+  loadURL();
+  if(backendInput.value) ping();
+</script>
 </body>
 </html>

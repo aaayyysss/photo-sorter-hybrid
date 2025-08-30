@@ -3,10 +3,13 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.npz
 .venv/
 venv/
 .env
 .env.*
+data/
+srv/
 
 # OS
 .DS_Store
@@ -25,3 +28,8 @@ local-app/.cache/
 local-app/output/
 backend/.cache/
 backend/data/
+
+refs_export*.json
+decisions*.json
+.DS_Store
+Thumbs.db
